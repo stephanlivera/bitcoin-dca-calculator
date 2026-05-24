@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bitcoin DCA Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="dca.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            surface: { DEFAULT: '#0f1117', card: '#161922', elevated: '#1c2030' },
+            accent: { DEFAULT: '#f7931a', muted: '#c47414' },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(247, 147, 26, 0.12), transparent), #0f1117; }
+    .stat-card { background: linear-gradient(145deg, rgba(28, 32, 48, 0.9), rgba(22, 25, 34, 0.95)); }
+    .glow { box-shadow: 0 0 40px rgba(247, 147, 26, 0.08); }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+    .chart-container { position: relative; height: 380px; }
+    @media (max-width: 640px) { .chart-container { height: 280px; } }
+  </style>
+</head>
+<body class="h-full font-sans text-slate-200 antialiased">
+  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl">
+
+      <!-- Header -->
+      <header class="mb-10 text-center sm:text-left">
+        <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.61 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
+          Historical BTC/USD data
+        </div>
+        <h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Bitcoin DCA Calculator</h1>
+        <p class="mt-2 max-w-xl text-slate-400">Simulate dollar-cost averaging into Bitcoin using daily closing prices.</p>
+      </header>
+
+      <!-- Loading -->
+      <div id="loading" class="flex flex-col items-center justify-center gap-4 py-24">
+        <div class="h-10 w-10 animate-spin rounded-full border-2 border-accent/30 border-t-accent"></div>
+        <p class="text-sm text-slate-400">Loading price data…</p>
+      </div>
+
+      <!-- Main content (hidden until data loads) -->
+      <div id="app" class="hidden space-y-6">
+
+        <!-- Controls -->
+        <div class="stat-card glow rounded-2xl border border-white/5 p-6 sm:p-8">
+          <h2 class="mb-6 text-sm font-semibold uppercase tracking-wider text-slate-500">Investment settings</h2>
+          <div class="grid gap-6 sm:grid-cols-2">
+            <div>
+              <label for="startDate" class="mb-2 block text-sm font-medium text-slate-300">Start date</label>
+              <input
+                type="date"
+                id="startDate"
+                class="w-full rounded-xl border border-white/10 bg-surface-elevated px-4 py-3 text-white outline-none transition focus:border-accent/50 focus:ring-2 focus:ring-accent/20"
+              />
+              <p id="startDateError" class="mt-2 hidden text-sm text-red-400" role="alert"></p>
+            </div>
+            <div>
+              <label for="dailyAmount" class="mb-2 block text-sm font-medium text-slate-300">Daily investment (USD)</label>
+              <div class="relative">
+                <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                <input
+                  type="number"
+                  id="dailyAmount"
+                  min="0.01"
+                  step="0.01"
+                  value="10"
+                  class="w-full rounded-xl border border-white/10 bg-surface-elevated py-3 pl-8 pr-4 text-white outline-none transition focus:border-accent/50 focus:ring-2 focus:ring-accent/20"
+                />
+              </div>
+            </div>
+          </div>
+          <p id="periodSummary" class="mt-4 text-sm text-slate-500"></p>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="stat-card rounded-2xl border border-white/5 p-6">
+            <div class="mb-3 flex items-center gap-2">
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10">
+                <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <span class="text-sm font-medium text-slate-400">Total invested</span>
+            </div>
+            <p id="totalInvested" class="text-2xl font-bold tracking-tight text-white sm:text-3xl">—</p>
+          </div>
+
+          <div class="stat-card rounded-2xl border border-white/5 p-6">
+            <div class="mb-3 flex items-center gap-2">
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
+                <svg class="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.14 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z"/></svg>
+              </div>
+              <span class="text-sm font-medium text-slate-400">Total BTC</span>
+            </div>
+            <p id="totalBtc" class="text-2xl font-bold tracking-tight text-white sm:text-3xl">—</p>
+          </div>
+
+          <div class="stat-card rounded-2xl border border-white/5 p-6">
+            <div class="mb-3 flex items-center gap-2">
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+                <svg class="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg>
+              </div>
+              <span class="text-sm font-medium text-slate-400">Current value</span>
+            </div>
+            <p id="currentValue" class="text-2xl font-bold tracking-tight text-white sm:text-3xl">—</p>
+            <p id="btcPrice" class="mt-1 text-xs text-slate-500"></p>
+          </div>
+
+          <div class="stat-card rounded-2xl border border-white/5 p-6">
+            <div class="mb-3 flex items-center gap-2">
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10">
+                <svg class="h-5 w-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+              </div>
+              <span class="text-sm font-medium text-slate-400">Profit / loss</span>
+            </div>
+            <p id="profitLoss" class="text-2xl font-bold tracking-tight sm:text-3xl">—</p>
+            <p id="profitLossPct" class="mt-1 text-sm font-medium">—</p>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="stat-card glow rounded-2xl border border-white/5 p-6 sm:p-8">
+          <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 class="text-lg font-semibold text-white">Portfolio growth</h2>
+              <p class="text-sm text-slate-500">Portfolio value vs. total invested over time</p>
+            </div>
+            <div class="flex items-center gap-4 text-xs text-slate-400">
+              <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-accent"></span> Portfolio value</span>
+              <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-slate-500"></span> Total invested</span>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="portfolioChart"></canvas>
+          </div>
+        </div>
+
+        <footer class="pb-4 text-center text-xs text-slate-600">
+          Simulated results based on historical daily closing prices. Not financial advice.
+        </footer>
+      </div>
+
+      <!-- Error -->
+      <div id="error" class="hidden rounded-2xl border border-red-500/20 bg-red-500/10 p-8 text-center">
+        <p class="font-medium text-red-400">Failed to load price data</p>
+        <p class="mt-2 text-sm text-slate-400">Serve this folder locally, e.g. <code class="rounded bg-white/5 px-1.5 py-0.5 text-slate-300">python -m http.server</code></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fmtUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    const fmtUsdFull = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtBtc = new Intl.NumberFormat('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 8 });
+    const fmtPct = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    let priceData = [];
+    let chart = null;
+
+    async function loadData() {
+      const res = await fetch('btc_daily.csv');
+      if (!res.ok) throw new Error('fetch failed');
+      const text = await res.text();
+      const lines = text.trim().split('\n');
+      priceData = lines.slice(1).map(line => {
+        const [date, close] = line.split(',');
+        return { date, close: parseFloat(close) };
+      });
+    }
+
+    function clearResults() {
+      document.getElementById('totalInvested').textContent = '—';
+      document.getElementById('totalBtc').textContent = '—';
+      document.getElementById('currentValue').textContent = '—';
+      document.getElementById('btcPrice').textContent = '';
+      document.getElementById('profitLoss').textContent = '—';
+      document.getElementById('profitLossPct').textContent = '—';
+      document.getElementById('profitLoss').className = 'text-2xl font-bold tracking-tight sm:text-3xl';
+      document.getElementById('profitLossPct').className = 'mt-1 text-sm font-medium';
+      updateChart([]);
+    }
+
+    function showDateError(message) {
+      const startInput = document.getElementById('startDate');
+      const errorEl = document.getElementById('startDateError');
+
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+      startInput.classList.add('border-red-500/50', 'ring-1', 'ring-red-500/30');
+      startInput.classList.remove('border-white/10');
+      document.getElementById('periodSummary').textContent = message;
+      clearResults();
+    }
+
+    function clearDateError() {
+      const startInput = document.getElementById('startDate');
+      const errorEl = document.getElementById('startDateError');
+
+      errorEl.textContent = '';
+      errorEl.classList.add('hidden');
+      startInput.classList.remove('border-red-500/50', 'ring-1', 'ring-red-500/30');
+      startInput.classList.add('border-white/10');
+    }
+
+    function updateUI() {
+      const startDate = document.getElementById('startDate').value;
+      const dailyAmount = parseFloat(document.getElementById('dailyAmount').value) || 0;
+      const latestDate = priceData[priceData.length - 1].date;
+      const validation = validateStartDate(startDate, latestDate);
+
+      if (!validation.valid) {
+        showDateError(validation.error);
+        return;
+      }
+
+      clearDateError();
+      const result = calculateDCA(priceData, startDate, dailyAmount);
+
+      document.getElementById('totalInvested').textContent = fmtUsd.format(result.totalInvested);
+      document.getElementById('totalBtc').textContent = fmtBtc.format(result.totalBtc) + ' BTC';
+      document.getElementById('currentValue').textContent = fmtUsd.format(result.currentValue);
+      document.getElementById('btcPrice').textContent = `BTC price: ${fmtUsdFull.format(result.latestPrice)}`;
+
+      const plEl = document.getElementById('profitLoss');
+      const plPctEl = document.getElementById('profitLossPct');
+      const positive = result.profitLoss >= 0;
+      const colorClass = positive ? 'text-emerald-400' : 'text-red-400';
+      plEl.textContent = (positive ? '+' : '') + fmtUsdFull.format(result.profitLoss);
+      plEl.className = `text-2xl font-bold tracking-tight sm:text-3xl ${colorClass}`;
+      plPctEl.textContent = (positive ? '+' : '') + fmtPct.format(result.profitLossPct);
+      plPctEl.className = `mt-1 text-sm font-medium ${colorClass}`;
+
+      const dayCount = result.chartData.length;
+      document.getElementById('periodSummary').textContent = dayCount > 0
+        ? `${dayCount.toLocaleString()} days · ${startDate} → ${priceData[priceData.length - 1].date}`
+        : 'Select a valid start date within the available data range.';
+
+      updateChart(result.chartData);
+    }
+
+    function updateChart(chartData) {
+      const ctx = document.getElementById('portfolioChart').getContext('2d');
+      const labels = chartData.map(d => d.date);
+      const step = Math.max(1, Math.floor(labels.length / 8));
+
+      if (chart) chart.destroy();
+      if (chartData.length === 0) return;
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, 380);
+      gradient.addColorStop(0, 'rgba(247, 147, 26, 0.25)');
+      gradient.addColorStop(1, 'rgba(247, 147, 26, 0)');
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Portfolio value',
+              data: chartData.map(d => d.value),
+              borderColor: '#f7931a',
+              backgroundColor: gradient,
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.3,
+              pointRadius: 0,
+              pointHoverRadius: 5,
+              pointHoverBackgroundColor: '#f7931a',
+            },
+            {
+              label: 'Total invested',
+              data: chartData.map(d => d.invested),
+              borderColor: 'rgba(148, 163, 184, 0.6)',
+              borderWidth: 2,
+              borderDash: [6, 4],
+              fill: false,
+              tension: 0,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1c2030',
+              titleColor: '#e2e8f0',
+              bodyColor: '#94a3b8',
+              borderColor: 'rgba(255,255,255,0.08)',
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                title: items => items[0].label,
+                label: ctx => `${ctx.dataset.label}: ${fmtUsdFull.format(ctx.parsed.y)}`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: {
+                color: '#64748b',
+                maxRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 8,
+                callback(val, i) {
+                  return i % step === 0 ? labels[i] : '';
+                },
+              },
+              border: { display: false },
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: {
+                color: '#64748b',
+                callback: v => '$' + (v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v),
+              },
+              border: { display: false },
+            },
+          },
+        },
+      });
+    }
+
+    async function init() {
+      try {
+        await loadData();
+        const maxDate = priceData[priceData.length - 1].date;
+        const startInput = document.getElementById('startDate');
+        startInput.min = EARLIEST_DATE;
+        startInput.max = maxDate;
+        startInput.value = '2020-01-01';
+
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+
+        startInput.addEventListener('change', updateUI);
+        startInput.addEventListener('input', updateUI);
+        document.getElementById('dailyAmount').addEventListener('input', updateUI);
+        updateUI();
+      } catch {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error').classList.remove('hidden');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

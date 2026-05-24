@@ -1,0 +1,17 @@
+{
+  "name": "btc-dca-calculator",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "watchPathIgnorePatterns": [
+      "btc_daily\\.csv",
+      "btcusd_1-min_data\\.csv"
+    ]
+  }
+}
