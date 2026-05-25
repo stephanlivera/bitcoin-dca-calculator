@@ -1,6 +1,6 @@
 # Bitcoin DCA Calculator
 
-
+! (dcascreenshot.png)
 
 A single-page web app that simulates dollar-cost averaging (DCA) into Bitcoin using historical daily closing prices. Pick a start date and daily investment amount, and the calculator shows how your portfolio would have performed over time.
 
@@ -14,14 +14,16 @@ A single-page web app that simulates dollar-cost averaging (DCA) into Bitcoin us
 
 ## Project files
 
-| File | Description |
-|------|-------------|
-| `index.html` | The DCA calculator (HTML, CSS, and JavaScript) |
-| `btc_daily.csv` | Daily BTC/USD closing prices (`Date`, `Close`) |
-| `dca.js` | Core DCA calculation logic |
-| `dca.test.js` | Jest unit tests for `dca.js` |
-| `update.js` | Script to append missing days from the CoinGecko API |
+
+| File                    | Description                                                 |
+| ----------------------- | ----------------------------------------------------------- |
+| `index.html`            | The DCA calculator (HTML, CSS, and JavaScript)              |
+| `btc_daily.csv`         | Daily BTC/USD closing prices (`Date`, `Close`)              |
+| `dca.js`                | Core DCA calculation logic                                  |
+| `dca.test.js`           | Jest unit tests for `dca.js`                                |
+| `update.js`             | Script to append missing days from the CoinGecko API        |
 | `btcusd_1-min_data.csv` | Original 1-minute source data (used to build the daily CSV) |
+
 
 ## Requirements
 
@@ -78,7 +80,7 @@ If you hit CoinGecko rate limits, wait a minute and run the script again.
 
 ### Automated updates (GitHub Actions)
 
-A workflow in [`.github/workflows/update-btc-prices.yml`](.github/workflows/update-btc-prices.yml) runs `node update.js` **once per day** at 12:00 UTC and commits any changes to `btc_daily.csv`. If the CSV is already current, the workflow finishes without a commit. You can also trigger it manually from the **Actions** tab → **Update BTC daily prices** → **Run workflow**.
+A workflow in `[.github/workflows/update-btc-prices.yml](.github/workflows/update-btc-prices.yml)` runs `node update.js` **once per day** at 12:00 UTC and commits any changes to `btc_daily.csv`. If the CSV is already current, the workflow finishes without a commit. You can also trigger it manually from the **Actions** tab → **Update BTC daily prices** → **Run workflow**.
 
 For pushes to work, enable **Settings → Actions → General → Workflow permissions → Read and write permissions**.
 
