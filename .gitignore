@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / project
+node_modules/
+
+# Large source data (not used by the live calculator)
+btcusd_1-min_data.csv

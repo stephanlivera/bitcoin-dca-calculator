@@ -74,6 +74,12 @@ Added 2 day(s):
 
 If you hit CoinGecko rate limits, wait a minute and run the script again.
 
+### Automated updates (GitHub Actions)
+
+A workflow in [`.github/workflows/update-btc-prices.yml`](.github/workflows/update-btc-prices.yml) runs `node update.js` on the **1st and 15th of each month** (about every two weeks) and commits any changes to `btc_daily.csv`. You can also trigger it manually from the **Actions** tab → **Update BTC daily prices** → **Run workflow**.
+
+For pushes to work, enable **Settings → Actions → General → Workflow permissions → Read and write permissions**.
+
 ## Testing
 
 The project includes Jest unit tests for the core DCA calculation logic in `dca.js` (see `dca.test.js`). These tests validate the mathematical accuracy of dollar-cost averaging calculations, including total invested, average buy price, and edge cases such as zero investment amounts.
