@@ -70,13 +70,13 @@ Added 2 day(s):
   2026-05-21  $77459.94
 ```
 
-**Keep data current:** run `node update.js` every **1–2 weeks** so the calculator includes recent prices. CoinGecko publishes each completed UTC day shortly after midnight UTC; if you run the script too early in the day, yesterday’s price may not be available yet.
+**Keep data current:** the GitHub Actions workflow updates prices daily; you can also run `node update.js` locally anytime if needed. CoinGecko publishes each completed UTC day shortly after midnight UTC; if you run the script too early in the day, yesterday’s price may not be available yet.
 
 If you hit CoinGecko rate limits, wait a minute and run the script again.
 
 ### Automated updates (GitHub Actions)
 
-A workflow in [`.github/workflows/update-btc-prices.yml`](.github/workflows/update-btc-prices.yml) runs `node update.js` on the **1st and 15th of each month** (about every two weeks) and commits any changes to `btc_daily.csv`. You can also trigger it manually from the **Actions** tab → **Update BTC daily prices** → **Run workflow**.
+A workflow in [`.github/workflows/update-btc-prices.yml`](.github/workflows/update-btc-prices.yml) runs `node update.js` **once per day** at 12:00 UTC and commits any changes to `btc_daily.csv`. If the CSV is already current, the workflow finishes without a commit. You can also trigger it manually from the **Actions** tab → **Update BTC daily prices** → **Run workflow**.
 
 For pushes to work, enable **Settings → Actions → General → Workflow permissions → Read and write permissions**.
 

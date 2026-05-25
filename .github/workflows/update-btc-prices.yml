@@ -2,8 +2,8 @@ name: Update BTC daily prices
 
 on:
   schedule:
-    # 12:00 UTC on the 1st and 15th of each month (~every two weeks)
-    - cron: '0 12 1,15 * *'
+    # 12:00 UTC daily (after CoinGecko's completed-day cutoff)
+    - cron: '0 12 * * *'
   workflow_dispatch:
 
 permissions:
