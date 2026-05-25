@@ -1,5 +1,7 @@
 # Bitcoin DCA Calculator
 
+**[Live demo](https://stephanlivera.github.io/bitcoin-dca-calculator/)** — try the calculator in your browser.
+
 ![Bitcoin DCA Calculator screenshot](dcascreenshot.png)
 
 A single-page web app that simulates dollar-cost averaging (DCA) into Bitcoin using historical daily closing prices. Pick a start date and daily investment amount, and the calculator shows how your portfolio would have performed over time.
